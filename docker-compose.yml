@@ -1,0 +1,52 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: intranet-backend
+    working_dir: /app/backend
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             (python manage.py seed || true) &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    environment:
+      DJANGO_CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+      - sqlite_data:/app/data
+    networks:
+      - intranet
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: intranet-frontend
+    working_dir: /app
+    command: npm run dev -- -H 0.0.0.0 -p 3000
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - intranet
+
+networks:
+  intranet:
+    driver: bridge
+
+volumes:
+  sqlite_data:

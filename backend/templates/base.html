@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}My Driving School{% endblock %}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 0; background: #f7f8fb; color: #1f2937; }
+        header { background: #1d4ed8; color: white; padding: 1.25rem 2rem; }
+        header h1 { margin: 0; font-size: 1.4rem; }
+        main { max-width: 960px; margin: 2rem auto; background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        a { color: #1d4ed8; }
+        .badge { display: inline-block; background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 999px; font-size: 0.85rem; margin-right: 6px; }
+        .links { margin-top: 1.5rem; }
+        .links a { display: inline-block; margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>My Driving School - Intranet Auto-ecole</h1>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

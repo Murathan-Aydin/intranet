@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Accueil - My Driving School{% endblock %}
+
+{% block content %}
+    <h2>Bienvenue sur l'intranet</h2>
+    <p>Cette page est servie par le moteur de templates Django. Le front utilisateur principal est l'application Next.js.</p>
+
+    <p><strong>Comptes geres :</strong>
+        {% for code, label in roles %}
+            <span class="badge">{{ label }}</span>
+        {% endfor %}
+    </p>
+
+    <div class="links">
+        <a href="/admin/">Administration Django</a>
+        <a href="/api/docs/">Documentation API (Swagger)</a>
+        <a href="/api/schema/">Schema OpenAPI</a>
+    </div>
+{% endblock %}

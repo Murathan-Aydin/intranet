@@ -1,0 +1,9 @@
+node_modules
+.next
+.react-router
+build
+README.md
+.git
+.gitignore
+.DS_Store
+.env*
