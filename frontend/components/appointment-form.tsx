@@ -34,6 +34,21 @@ function toDatetimeLocal(value: string | undefined): string {
   return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
+const DURATION_OPTIONS: { value: number; label: string }[] = [
+  { value: 30, label: "30 minutes" },
+  { value: 60, label: "1 heure" },
+  { value: 90, label: "1h30" },
+  { value: 120, label: "2 heures" },
+  { value: 180, label: "3 heures" },
+  { value: 240, label: "4 heures" },
+];
+
+function computeInitialDuration(start?: string, end?: string): number {
+  if (!start || !end) return 60;
+  const diff = (new Date(end).getTime() - new Date(start).getTime()) / 60000;
+  return diff > 0 ? Math.round(diff) : 60;
+}
+
 export function AppointmentForm({
   initial,
   onSaved,
@@ -57,7 +72,7 @@ export function AppointmentForm({
         ? String(user.id)
         : "",
     start_at: toDatetimeLocal(initial.start_at),
-    end_at: toDatetimeLocal(initial.end_at),
+    duration: String(computeInitialDuration(initial.start_at, initial.end_at)),
     location: initial.location || "",
   });
   const [error, setError] = useState<string | null>(null);
@@ -79,11 +94,15 @@ export function AppointmentForm({
     setError(null);
     setSubmitting(true);
     try {
+      const startDate = new Date(form.start_at);
+      const endDate = new Date(
+        startDate.getTime() + Number(form.duration) * 60_000,
+      );
       const payload = {
         student: Number(form.student),
         instructor: Number(form.instructor),
-        start_at: new Date(form.start_at).toISOString(),
-        end_at: new Date(form.end_at).toISOString(),
+        start_at: startDate.toISOString(),
+        end_at: endDate.toISOString(),
         location: form.location,
       };
       if (initial.id) {
@@ -153,13 +172,18 @@ export function AppointmentForm({
           />
         </div>
         <div className="space-y-2">
-          <Label>Fin</Label>
-          <Input
-            type="datetime-local"
+          <Label>Duree</Label>
+          <Select
             required
-            value={form.end_at}
-            onChange={(e) => setForm({ ...form, end_at: e.target.value })}
-          />
+            value={form.duration}
+            onChange={(e) => setForm({ ...form, duration: e.target.value })}
+          >
+            {DURATION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Lieu</Label>

@@ -92,6 +92,8 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by("username")
 
     def get_permissions(self):
+        if self.action in {"list", "retrieve", "planning"}:
+            return [IsStaffRole()]
         return [IsSecretaryOrAdmin()]
 
     def get_serializer_class(self):
@@ -109,6 +111,9 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.user.role == User.Roles.SECRETARY:
             # A secretary can only manage students and instructors
             qs = qs.filter(role__in=[User.Roles.STUDENT, User.Roles.INSTRUCTOR])
+        elif self.request.user.role == User.Roles.INSTRUCTOR:
+            # Instructors can only see students (read-only) and themselves
+            qs = qs.filter(Q(role=User.Roles.STUDENT) | Q(id=self.request.user.id))
         return qs
 
     def perform_create(self, serializer):

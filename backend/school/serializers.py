@@ -165,6 +165,24 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 {"instructor": "L'utilisateur doit etre un instructeur."}
             )
 
+        # Instructor double-booking check (overlap on same instructor)
+        if instructor and start_at and end_at:
+            conflicts = Appointment.objects.filter(
+                instructor=instructor,
+                start_at__lt=end_at,
+                end_at__gt=start_at,
+            )
+            if self.instance and self.instance.pk:
+                conflicts = conflicts.exclude(pk=self.instance.pk)
+            if conflicts.exists():
+                raise serializers.ValidationError(
+                    {
+                        "non_field_errors": [
+                            "Cet instructeur a deja un rendez-vous sur ce creneau."
+                        ]
+                    }
+                )
+
         # Hours availability check
         if student and start_at and end_at:
             duration = int((end_at - start_at).total_seconds() // 60)
