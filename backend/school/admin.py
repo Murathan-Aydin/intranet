@@ -8,6 +8,7 @@ from .models import (
     Question,
     QuestionSet,
     QuizAttempt,
+    StudentInvitation,
     StudentProfile,
     User,
 )
@@ -69,3 +70,11 @@ class QuestionSetAdmin(admin.ModelAdmin):
 class QuizAttemptAdmin(admin.ModelAdmin):
     list_display = ("student", "question_set", "score", "total", "submitted_at")
     list_filter = ("question_set",)
+
+
+@admin.register(StudentInvitation)
+class StudentInvitationAdmin(admin.ModelAdmin):
+    list_display = ("email", "created_by", "created_at", "expires_at", "accepted_at")
+    list_filter = ("accepted_at",)
+    search_fields = ("email", "first_name", "last_name")
+    readonly_fields = ("token", "created_at", "accepted_at", "accepted_user")

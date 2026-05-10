@@ -1,5 +1,12 @@
+import logging
+from datetime import timedelta
+
+from django.conf import settings as django_settings
+from django.core.mail import send_mail
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.utils import timezone
 from django.views.generic import TemplateView
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -16,6 +23,7 @@ from .models import (
     QuestionSet,
     QuizAttempt,
     QuizAttemptAnswer,
+    StudentInvitation,
     StudentProfile,
     User,
 )
@@ -30,10 +38,16 @@ from .serializers import (
     QuestionSetSerializer,
     QuizAttemptSerializer,
     QuizSubmissionSerializer,
+    StudentInvitationAcceptSerializer,
+    StudentInvitationCreateSerializer,
+    StudentInvitationPublicSerializer,
+    StudentInvitationSerializer,
     UserCreateSerializer,
     UserSerializer,
     UserUpdateSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -548,4 +562,142 @@ class ExamSubmitView(APIView):
                 "pass_threshold": pass_threshold,
                 "details": details,
             }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Student invitations (email-based onboarding)
+# ---------------------------------------------------------------------------
+
+
+def _send_invitation_email(invitation: StudentInvitation) -> tuple[bool, str | None]:
+    """Send the invitation email. Returns (success, error_message)."""
+    base = django_settings.FRONTEND_BASE_URL.rstrip("/")
+    accept_url = f"{base}/invite/{invitation.token}"
+    context = {
+        "invitation": invitation,
+        "accept_url": accept_url,
+        "expires_at": invitation.expires_at,
+    }
+    subject = "Invitation a creer votre compte etudiant - My Driving School"
+    text_body = render_to_string("school/email/invitation.txt", context)
+    try:
+        html_body = render_to_string("school/email/invitation.html", context)
+    except Exception:
+        html_body = None
+
+    try:
+        send_mail(
+            subject=subject,
+            message=text_body,
+            from_email=django_settings.DEFAULT_FROM_EMAIL or None,
+            recipient_list=[invitation.email],
+            html_message=html_body,
+            fail_silently=False,
+        )
+        return True, None
+    except Exception as exc:
+        logger.exception("Failed to send invitation email to %s", invitation.email)
+        return False, str(exc)
+
+
+class StudentInvitationViewSet(viewsets.ModelViewSet):
+    """Secretary/Admin: invite a student by email."""
+
+    queryset = StudentInvitation.objects.select_related(
+        "created_by", "accepted_user"
+    ).all()
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return StudentInvitationCreateSerializer
+        return StudentInvitationSerializer
+
+    def get_permissions(self):
+        return [IsSecretaryOrAdmin()]
+
+    def perform_create(self, serializer):
+        invitation = serializer.save(created_by=self.request.user)
+        ok, err = _send_invitation_email(invitation)
+        if not ok:
+            invitation.delete()
+            raise ValidationError(
+                {"email": f"Echec de l'envoi de l'email : {err}"}
+            )
+
+    @action(detail=True, methods=["post"], url_path="resend")
+    def resend(self, request, pk=None):
+        invitation = self.get_object()
+        if invitation.is_accepted:
+            raise ValidationError("Cette invitation a deja ete acceptee.")
+        invitation.expires_at = timezone.now() + timedelta(days=7)
+        invitation.save(update_fields=["expires_at"])
+        ok, err = _send_invitation_email(invitation)
+        if not ok:
+            raise ValidationError(
+                {"email": f"Echec de l'envoi de l'email : {err}"}
+            )
+        return Response(StudentInvitationSerializer(invitation).data)
+
+
+class InvitationDetailView(APIView):
+    """Public endpoint used by the acceptance page to fetch invitation data."""
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    def get(self, request, token):
+        invitation = get_object_or_404(StudentInvitation, token=token)
+        if invitation.is_accepted:
+            return Response(
+                {"detail": "Cette invitation a deja ete utilisee."},
+                status=status.HTTP_410_GONE,
+            )
+        if invitation.is_expired:
+            return Response(
+                {"detail": "Cette invitation a expire."},
+                status=status.HTTP_410_GONE,
+            )
+        return Response(StudentInvitationPublicSerializer(invitation).data)
+
+
+class InvitationAcceptView(APIView):
+    """Public endpoint: the invitee submits username + password to create the account."""
+
+    permission_classes = [AllowAny]
+    authentication_classes: list = []
+
+    def post(self, request, token):
+        invitation = get_object_or_404(StudentInvitation, token=token)
+        if invitation.is_accepted:
+            raise ValidationError("Cette invitation a deja ete utilisee.")
+        if invitation.is_expired:
+            raise ValidationError("Cette invitation a expire.")
+
+        serializer = StudentInvitationAcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        first_name = data.get("first_name") or invitation.first_name
+        last_name = data.get("last_name") or invitation.last_name
+
+        user = User(
+            username=data["username"],
+            email=invitation.email,
+            first_name=first_name or "",
+            last_name=last_name or "",
+            role=User.Roles.STUDENT,
+        )
+        user.set_password(data["password"])
+        user.save()
+        StudentProfile.objects.get_or_create(user=user)
+
+        invitation.accepted_at = timezone.now()
+        invitation.accepted_user = user
+        invitation.save(update_fields=["accepted_at", "accepted_user"])
+
+        return Response(
+            {"detail": "Compte cree.", "username": user.username},
+            status=status.HTTP_201_CREATED,
         )

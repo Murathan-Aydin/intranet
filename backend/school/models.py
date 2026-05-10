@@ -1,8 +1,12 @@
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Sum
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -245,3 +249,60 @@ class QuizAttemptAnswer(models.Model):
 
     def __str__(self):
         return f"Answer Q{self.question_id} ({'OK' if self.is_correct else 'KO'})"
+
+
+# ---------------------------------------------------------------------------
+# Student invitation (email-based onboarding)
+# ---------------------------------------------------------------------------
+
+
+def _default_invitation_expiry():
+    return timezone.now() + timedelta(days=7)
+
+
+def _default_invitation_token():
+    return secrets.token_urlsafe(32)
+
+
+class StudentInvitation(models.Model):
+    email = models.EmailField()
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
+    token = models.CharField(
+        max_length=64, unique=True, default=_default_invitation_token, editable=False
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_invitations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(default=_default_invitation_expiry)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accepted_invitation",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_accepted(self):
+        return self.accepted_at is not None
+
+    @property
+    def is_valid(self):
+        return not self.is_accepted and not self.is_expired
+
+    def __str__(self):
+        return f"Invitation {self.email} ({'accepted' if self.is_accepted else 'pending'})"

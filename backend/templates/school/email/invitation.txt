@@ -1,0 +1,14 @@
+Bonjour{% if invitation.first_name %} {{ invitation.first_name }}{% endif %},
+
+Vous avez ete invite(e) a creer votre compte etudiant sur My Driving School.
+
+Cliquez sur le lien ci-dessous pour finaliser la creation de votre compte
+(choix de votre identifiant et de votre mot de passe) :
+
+{{ accept_url }}
+
+Ce lien est valable jusqu'au {{ expires_at|date:"d/m/Y H:i" }}.
+
+Si vous n'etes pas a l'origine de cette demande, ignorez simplement ce message.
+
+L'equipe My Driving School

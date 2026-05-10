@@ -164,3 +164,25 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ---------------------------------------------------------------------------
+# Email (SMTP)
+# ---------------------------------------------------------------------------
+
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "ssl0.ovh.net")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "465"))
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", True)
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "no-reply@example.com"
+)
+
+# Frontend base URL used to build links sent in emails (invitations, etc.)
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://localhost:3000")

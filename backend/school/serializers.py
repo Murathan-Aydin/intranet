@@ -8,6 +8,7 @@ from .models import (
     Question,
     QuestionSet,
     QuizAttempt,
+    StudentInvitation,
     StudentProfile,
     User,
 )
@@ -325,3 +326,80 @@ class QuizAttemptSerializer(serializers.ModelSerializer):
             "total",
             "submitted_at",
         )
+
+
+# ---------------------------------------------------------------------------
+# Student invitations
+# ---------------------------------------------------------------------------
+
+
+class StudentInvitationSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(
+        source="created_by.username", read_only=True
+    )
+
+    class Meta:
+        model = StudentInvitation
+        fields = (
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "created_by_username",
+            "created_at",
+            "expires_at",
+            "accepted_at",
+            "status",
+        )
+        read_only_fields = (
+            "id",
+            "created_by_username",
+            "created_at",
+            "expires_at",
+            "accepted_at",
+            "status",
+        )
+
+    def get_status(self, obj):
+        if obj.is_accepted:
+            return "accepted"
+        if obj.is_expired:
+            return "expired"
+        return "pending"
+
+
+class StudentInvitationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StudentInvitation
+        fields = ("email", "first_name", "last_name")
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "Un compte avec cet email existe deja."
+            )
+        return value
+
+
+class StudentInvitationPublicSerializer(serializers.ModelSerializer):
+    """Read-only view exposed publicly via the token URL."""
+
+    class Meta:
+        model = StudentInvitation
+        fields = ("email", "first_name", "last_name", "expires_at")
+
+
+class StudentInvitationAcceptSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Identifiant requis.")
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("Identifiant deja utilise.")
+        return value
