@@ -227,3 +227,21 @@ class QuizAttempt(models.Model):
 
     def __str__(self):
         return f"{self.student.username}: {self.score}/{self.total}"
+
+
+class QuizAttemptAnswer(models.Model):
+    attempt = models.ForeignKey(
+        QuizAttempt, on_delete=models.CASCADE, related_name="answers"
+    )
+    question = models.ForeignKey(Question, on_delete=models.CASCADE)
+    chosen_choice = models.ForeignKey(
+        Choice, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    is_correct = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [models.Index(fields=["attempt", "question"])]
+
+    def __str__(self):
+        return f"Answer Q{self.question_id} ({'OK' if self.is_correct else 'KO'})"
