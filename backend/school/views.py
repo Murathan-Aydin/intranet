@@ -305,8 +305,12 @@ class QuestionSetViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        if self.request.user.role not in {User.Roles.INSTRUCTOR, User.Roles.ADMIN}:
-            raise PermissionDenied("Seuls les instructeurs/admin peuvent creer des series.")
+        if self.request.user.role not in {
+            User.Roles.INSTRUCTOR,
+            User.Roles.SECRETARY,
+            User.Roles.ADMIN,
+        }:
+            raise PermissionDenied("Seuls les instructeurs/secretaires/admin peuvent creer des series.")
         serializer.save(created_by=self.request.user)
 
     def perform_update(self, serializer):

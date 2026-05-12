@@ -32,7 +32,7 @@ const NAV: NavItem[] = [
   { href: "/lesson-packs", label: "Forfaits", icon: CreditCard, roles: ["secretary", "admin"] },
   { href: "/buy-hours", label: "Acheter des heures", icon: ShoppingCart, roles: ["student"] },
   { href: "/quiz", label: "Code de la route", icon: GraduationCap, roles: ["student"] },
-  { href: "/quiz/manage", label: "Gerer les series", icon: PencilRuler, roles: ["instructor", "admin"] },
+  { href: "/quiz/manage", label: "Gerer les series", icon: PencilRuler, roles: ["instructor", "secretary", "admin"] },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
