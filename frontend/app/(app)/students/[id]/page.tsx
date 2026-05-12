@@ -38,17 +38,35 @@ interface Appointment {
   instructor_full_name: string;
 }
 
+interface QuizAttempt {
+  id: number;
+  question_set: number;
+  question_set_title: string;
+  score: number;
+  total: number;
+  submitted_at: string;
+}
+
+function pct(score: number, total: number): number {
+  if (!total) return 0;
+  return Math.round((score / total) * 100);
+}
+
 export default function StudentDetailPage() {
   const params = useParams<{ id: string }>();
   const { user: me } = useAuth();
   const [student, setStudent] = useState<UserData | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
 
   useEffect(() => {
     api<UserData>(`/api/users/${params.id}/`).then(setStudent).catch(() => setStudent(null));
     api<Appointment[]>(`/api/appointments/?student=${params.id}`)
       .then(setAppointments)
       .catch(() => {});
+    api<QuizAttempt[]>(`/api/quiz-attempts/?student=${params.id}`)
+      .then(setAttempts)
+      .catch(() => setAttempts([]));
   }, [params.id]);
 
   if (!student || !me) return <p className="text-muted-foreground">Chargement...</p>;
@@ -120,6 +138,70 @@ export default function StudentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stats Code de la route</CardTitle>
+          <CardDescription>
+            {attempts.length} tentative{attempts.length > 1 ? "s" : ""}
+            {attempts.length > 0 && (
+              <>
+                {" - moyenne "}
+                {Math.round(
+                  attempts.reduce((acc, a) => acc + pct(a.score, a.total), 0) /
+                    attempts.length,
+                )}
+                {"%"}
+              </>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <THead>
+              <TR>
+                <TH>Date</TH>
+                <TH>Serie</TH>
+                <TH>Score</TH>
+                <TH>%</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {attempts.length === 0 && (
+                <TR>
+                  <TD colSpan={4} className="py-6 text-center text-muted-foreground">
+                    Aucune tentative.
+                  </TD>
+                </TR>
+              )}
+              {[...attempts]
+                .sort(
+                  (a, b) =>
+                    new Date(b.submitted_at).getTime() -
+                    new Date(a.submitted_at).getTime(),
+                )
+                .slice(0, 20)
+                .map((a) => {
+                  const p = pct(a.score, a.total);
+                  return (
+                    <TR key={a.id}>
+                      <TD>{formatDateTime(a.submitted_at)}</TD>
+                      <TD>{a.question_set_title}</TD>
+                      <TD>
+                        {a.score} / {a.total}
+                      </TD>
+                      <TD>
+                        <Badge variant={p >= 80 ? "success" : p >= 50 ? "default" : "warning"}>
+                          {p}%
+                        </Badge>
+                      </TD>
+                    </TR>
+                  );
+                })}
+            </TBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

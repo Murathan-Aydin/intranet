@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Users,
   PencilRuler,
+  UserSquare2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, roles: ["student", "instructor", "secretary", "admin"] },
   { href: "/planning", label: "Planning", icon: CalendarDays, roles: ["student", "instructor", "secretary", "admin"] },
   { href: "/users", label: "Utilisateurs", icon: Users, roles: ["secretary", "admin"] },
+  { href: "/students", label: "Eleves", icon: UserSquare2, roles: ["instructor", "secretary", "admin"] },
   { href: "/lesson-packs", label: "Forfaits", icon: CreditCard, roles: ["secretary", "admin"] },
   { href: "/buy-hours", label: "Acheter des heures", icon: ShoppingCart, roles: ["student"] },
   { href: "/quiz", label: "Code de la route", icon: GraduationCap, roles: ["student"] },
