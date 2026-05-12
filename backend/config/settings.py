@@ -52,6 +52,8 @@ if not SECRET_KEY:
         raise ValueError("DJANGO_SECRET_KEY must be set when DEBUG is False")
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+if "*" in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 
 CORS_ALLOWED_ORIGINS = env_list(
@@ -104,6 +106,7 @@ SPECTACULAR_SETTINGS = {
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -134,10 +137,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # Database (SQLite as required by the project)
 
+_sqlite_path = os.environ.get("SQLITE_PATH")
+if _sqlite_path:
+    _db_name = Path(_sqlite_path)
+else:
+    _db_name = BASE_DIR / os.environ.get("SQLITE_NAME", "db.sqlite3")
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / os.environ.get("SQLITE_NAME", "db.sqlite3"),
+        "NAME": _db_name,
     }
 }
 
@@ -162,6 +171,19 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

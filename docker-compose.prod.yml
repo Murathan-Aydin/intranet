@@ -1,0 +1,69 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: intranet-backend:prod
+    restart: unless-stopped
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-*}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS}
+      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS}
+      DJANGO_LANGUAGE_CODE: ${DJANGO_LANGUAGE_CODE:-fr-fr}
+      DJANGO_TIME_ZONE: ${DJANGO_TIME_ZONE:-Europe/Paris}
+      SQLITE_PATH: /app/data/db.sqlite3
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT:-465}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-True}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-False}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+    volumes:
+      - sqlite_data:/app/data
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/schema/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - intranet
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    image: intranet-frontend:prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - intranet
+
+networks:
+  intranet:
+    driver: bridge
+
+volumes:
+  sqlite_data:
