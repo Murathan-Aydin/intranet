@@ -28,8 +28,6 @@ services:
       - sqlite_data:/app/data
     expose:
       - "8000"
-    ports:
-      - "8000:8000"
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/schema/"]
       interval: 30s
@@ -53,8 +51,6 @@ services:
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
     expose:
       - "3000"
-    ports:
-      - "3000:3000"
     depends_on:
       backend:
         condition: service_healthy
