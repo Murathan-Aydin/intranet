@@ -53,8 +53,9 @@ if not SECRET_KEY:
 
 _default_allowed_hosts = "127.0.0.1,localhost" if DEBUG else "*"
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", _default_allowed_hosts)
-if "*" in ALLOWED_HOSTS:
+if not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["*"]
+print(f"[settings] DEBUG={DEBUG} ALLOWED_HOSTS={ALLOWED_HOSTS}", flush=True)
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 
 CORS_ALLOWED_ORIGINS = env_list(
@@ -179,10 +180,8 @@ STORAGES = {
     },
 }
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
-
-if not DEBUG:
+if env_bool("DJANGO_BEHIND_HTTPS_PROXY", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
