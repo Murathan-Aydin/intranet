@@ -51,7 +51,8 @@ if not SECRET_KEY:
     else:
         raise ValueError("DJANGO_SECRET_KEY must be set when DEBUG is False")
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+_default_allowed_hosts = "127.0.0.1,localhost" if DEBUG else "*"
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", _default_allowed_hosts)
 if "*" in ALLOWED_HOSTS:
     ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
